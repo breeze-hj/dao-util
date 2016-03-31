@@ -16,6 +16,10 @@ public class JunitInsertGenerator {
 	public static void main(String[] args) throws SQLException {
 		String tableName = "course";
 
+		createInsertSQL(tableName);
+	}
+
+	public static void createInsertSQL(String tableName) throws SQLException {
 		Connection connection = DBUtil.getConnection(DBUtil.url, DBUtil.user, DBUtil.password);
 		ResultSet rs = DBUtil.checkTable(connection, tableName);
 

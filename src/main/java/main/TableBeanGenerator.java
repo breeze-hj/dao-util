@@ -11,8 +11,12 @@ import java.sql.Types;
 public class TableBeanGenerator {
 
 	public static void main(String[] args) throws SQLException, IOException {
-		String tableName = "taked_course";
+		String tableName = "course";
 		
+		createBean(tableName);
+	}
+
+	public static void createBean(String tableName) throws SQLException, IOException {
 		Connection connection = DBUtil.getConnection(DBUtil.url, DBUtil.user, DBUtil.password);
 		ResultSet rs = DBUtil.checkTable(connection, tableName);
 
@@ -82,7 +86,7 @@ public class TableBeanGenerator {
 			String getOrIs = typeName.equals("Boolean") ? "is" : "get";
 			fw.write("\tpublic " + typeName + " " + getOrIs + camelFirst(fieldName) + "(" + "){\n");
 			fw.write("\t\treturn " + fieldName + ";\n");
-			fw.write("\t}\n");
+			fw.write("\t}\n\n");
 
 			fw.write("\tpublic void set" + camelFirst(fieldName) + "(" + typeName + " " + fieldName + "){\n");
 			fw.write("\t\tthis." + fieldName + " = " + fieldName + ";\n");
