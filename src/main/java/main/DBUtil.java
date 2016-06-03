@@ -9,7 +9,7 @@ import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 
 public class DBUtil {
 
-	public static String url = "jdbc:mysql://localhost:3306/aimooc?";
+	public static String url = "jdbc:mysql://localhost:3306/junit?";
 	public static String user = "root";
 	public static String password = "123";
 	

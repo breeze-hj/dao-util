@@ -1,5 +1,9 @@
 package main;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,18 +12,44 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class JunitInsertGenerator {
 
 	public static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-	public static void main(String[] args) throws SQLException {
-		String tableName = "course";
+	public static void main(String[] args) throws SQLException, IOException, InterruptedException {
+		String tableName = "item";
 
-		createInsertSQL(tableName);
+		copy(createInsertSQL(tableName));
 	}
 
-	public static void createInsertSQL(String tableName) throws SQLException {
+	private static void copy(String insert) {
+		try {
+			System.out.println(insert);
+			Thread.sleep(1);
+			System.err.println("press enter to copy...");
+			ScheduledExecutorService exe = Executors.newScheduledThreadPool(1);
+			exe.schedule(new Runnable() {
+				public void run() {
+					System.exit(0);
+				}
+			}, 10, TimeUnit.SECONDS);
+			int r = System.in.read();
+			if (r == 13) {
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				StringSelection selection = new StringSelection(insert);
+				clipboard.setContents(selection, selection);
+			}
+			exe.shutdownNow();
+		} catch (Exception e) {
+
+		}
+	}
+
+	public static String createInsertSQL(String tableName) throws SQLException {
 		Connection connection = DBUtil.getConnection(DBUtil.url, DBUtil.user, DBUtil.password);
 		ResultSet rs = DBUtil.checkTable(connection, tableName);
 
@@ -37,14 +67,14 @@ public class JunitInsertGenerator {
 			sb.append(field).append(",");
 		}
 		sb.setLength(sb.length() - 1);
-		
+
 		sb.append(")\r\n").append("VALUES").append("(");
 		for (Object value : values) {
 			sb.append(getValue(value)).append(",");
 		}
 		sb.setLength(sb.length() - 1);
 		sb.append(")");
-		System.out.println(sb.toString());
+		return sb.toString();
 	}
 
 	public static Object getValue(Object obj) {

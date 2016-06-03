@@ -1,0 +1,290 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>Easy-Dao-Junit</title>
+		<script type="text/javascript" src="http://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+	</head>
+
+	<body>
+		<div style="width: 80%;margin: 0 auto;">
+
+			<textarea id="sql" name="sql" rows="10" style="width: 100%; overflow: auto; word-break: break-all;"></textarea>
+			<table border="0" width="100%">
+				<tbody>
+					<tr>
+						<td width="15%">
+							<input id="paste" type="button" value="粘 贴">
+						</td>
+						<td width="20%">
+							<input id="batch" type="button" value="解 析">
+						</td>
+						<td width="15%">
+							<input id="create" type="button" value="生成SQL并复制">
+						</td>
+						<td width="15%"></td>
+						<td width="15%"></td>
+						<td width="15%">
+							<input id="clean_table" type="button" value="清空表">
+						</td>
+						<td width="15%">
+							<input id="clear_all" type="button" value="清 除">
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<table id="dis_table" border="1">
+				<thead>
+				</thead>
+				<tbody></tbody>
+			</table>
+
+		</div>
+	</body>
+
+	<script type="text/javascript">
+		//	var sql = "insert into table(id,name,comment,time) values (1,'lala','any','2011-11-12');"
+		//			+ "insert into table(id,name,comment,time) values (2,'dongdong','s,ome',adddate('2011-12-12',10))";
+		var sql = "";
+		$(function() {
+			$("#sql").val(sql);
+		});
+
+		function last(arr) {
+			if (arr.length == 0) {
+				return '';
+			}
+			return arr[arr.length - 1];
+		}
+		$("#batch").click(
+			function() {
+				var sql = $("#sql").val();
+				var column1 = sql.indexOf("(");
+				var column2 = sql.indexOf(")", column1);
+				var column = sql.substring(column1 + 1, column2).split(",");
+				var into = sql.indexOf("into");
+				if (into == -1) {
+					into = sql.indexOf("INTO");
+				}
+				var dbTable = sql.substring(into + 4, column1).trim();
+				$("#dis_table").attr('dbTable', dbTable);
+				if ($("#dis_table thead tr").length == 0) {
+					var tr = $("<tr>");
+					$("<th>").appendTo(tr);
+					for (i in column) {
+						var th = $("<th>");
+						$("<div column='1'>").html(column[i].trim()).appendTo(
+							th);
+						var op = $("<div align='right'>");
+						var addDiv = $("<div style='display:inline'>").append(
+							$("<a href='#'>").click(addValue).html("递增"));
+						var sameDiv = $("<div style='display:inline'>").append(
+							$("<a href='#'>").click(sameValue).html("定值"));
+						var delDiv = $("<div style='display:inline'>").append(
+							$("<a href='#'>").click(delColumn).html("删除"));
+						op.append(addDiv);
+						op.append($("<div style='display:inline'>").text('|'));
+						op.append(sameDiv);
+						op.append($("<div style='display:inline'>").text('|'));
+						op.append(delDiv);
+						op.appendTo(th);
+						th.appendTo(tr);
+					}
+					tr.appendTo($("#dis_table thead"));
+				}
+				var inserts = $("#sql").val().split(";");
+				for (i in inserts) {
+					var subSql = inserts[i].trim();
+					if (subSql == '') {
+						continue;
+					}
+					var from = subSql.indexOf("(", subSql.indexOf("(") + 1);
+					var to = subSql.length - 1;
+					var values = subSql.substring(from + 1, to).split(",");
+					if (values.length == column.length) {
+						// do nothing
+					} else {
+						values = [];
+						var valueParrten = subSql.substring(from + 1, to);
+						var splitStack = [];
+						var valueStack = [];
+						for (i = 0; i < valueParrten.length; i++) {
+							var lastSplit = last(splitStack);
+							var cur = valueParrten.charAt(i);
+							if (lastSplit == '\'' || lastSplit == '\"') {
+								if (lastSplit == cur) {
+									splitStack.pop();
+								}
+							} else {
+								if (cur == '\'' || cur == '\"' || cur == '(') {
+									splitStack.push(cur);
+								} else if (cur == ')') {
+									if (lastSplit == '(') {
+										splitStack.pop();
+									}
+								} else if (cur == ',') {
+									if (lastSplit == '') {
+										values.push(valueStack.join(""));
+										valueStack = [];
+										continue;
+									}
+								}
+							}
+							valueStack.push(cur);
+						}
+						values.push(valueStack.join(""));
+					}
+					var tr = $("<tr>");
+					$("<td>")
+						.append(
+							$("<input type='button'>").val("删 除")
+							.click(delRow)).appendTo(tr);
+					for (i in values) {
+						var v = values[i].trim();
+						var td = $("<td>").attr('temp', v).html(v);
+						td.click(toEdit);
+						td.appendTo(tr);
+					}
+					tr.appendTo($("#dis_table tbody"));
+				}
+			});
+
+		function toEdit(e) {
+			var td = $(this);
+			var v = td.attr('temp');
+			td.empty();
+			var width = td.width();
+			var input = $("<input>").width(width).val(v).bind({
+				"keyup": inputkey,
+				"blur": cansel
+			}).appendTo(td);
+			td.unbind('click');
+			input.focus();
+		}
+
+		function inputkey(e) {
+			var curKey = e.keyCode;
+			if (curKey == 13) {
+				var v = $(this).val();
+				var td = $(this).parent();
+				td.empty();
+				td.attr('temp', v).html(v).click(toEdit);
+			}
+		}
+
+		function cansel(e) {
+			var td = $(this).parent();
+			td.empty();
+			td.html(td.attr('temp')).click(toEdit);
+		}
+
+		function delRow(e) {
+			$(this).parent().parent().remove();
+		}
+
+		function addValue(e) {
+			var i = $(this).closest("th").prevAll().length;
+			var mode = 0;
+			var v = $("#dis_table tbody tr td:eq(" + i + ")").text();
+			var value = Number(v);
+			if (!isNaN(value)) {
+				mode = 1;
+			}
+			if (v.charAt(0) == '\'') {
+				mode = 2;
+			}
+			var j = 0;
+			$("#dis_table tbody tr").each(function() {
+				var td = $($(this).children("td").eq(i));
+				if (mode == 1) {
+					td.text(value + j++);
+				} else if (mode == 2) {
+					value = td.text();
+					value = value.substring(1, value.length - 1);
+					value = value + j++;
+					value = "'" + value + "'";
+					td.text(value);
+				}
+				td.attr('temp', td.text());
+			});
+			e.preventDefault();
+		}
+
+		function sameValue(e) {
+			var i = $(this).closest("th").prevAll().length;
+			var value = $("#dis_table tbody tr td:eq(" + i + ")").text();
+			$("#dis_table tbody tr").each(function() {
+				var td = $($(this).children("td").eq(i));
+				td.text(value);
+				td.attr('temp', td.text());
+			});
+			e.preventDefault();
+		}
+
+		function delColumn(e) {
+			var i = $(this).closest("th").prevAll().length;
+			$("#dis_table thead tr").each(function() {
+				$($(this).children("th").eq(i)).remove();
+			});
+			$("#dis_table tbody tr").each(function() {
+				$($(this).children("td").eq(i)).remove();
+			});
+		}
+		$("#paste").click(function() {
+			$("#sql").val(window.clipboardData.getData("Text"));
+		});
+		$("#create").click(function() {
+			var sqls = [];
+			var columns = [];
+			var i = 0;
+			$("#dis_table thead th div[column=1]").each(function() {
+				columns[i++] = $(this).html();
+			});
+			var values = [];
+			var trs = $("#dis_table tbody tr");
+			for (i = 0; i < trs.length; i++) {
+				var value = [];
+				var j = 0;
+				$(trs[i]).children("td:gt(0)").each(function() {
+					value[j++] = $(this).attr('temp');
+				});
+				values[i] = value;
+			}
+			var sqls = "";
+			var dbTable = $("#dis_table").attr('dbTable');
+			var presql = "insert into " + dbTable + "(";
+			for (i in columns) {
+				if (i > 0) {
+					presql += ",";
+				}
+				presql += columns[i];
+			}
+			presql += ")values \n";
+			for (i in values) {
+				var value = values[i];
+				var sql = presql;
+				sql += "(";
+				for (j in value) {
+					if (j > 0) {
+						sql += ",";
+					}
+					sql += value[j];
+				}
+				sql += ");\n";
+				sqls += sql;
+			}
+			window.clipboardData.setData("Text", sqls)
+		});
+		$("#clean_table").click(function() {
+			$("#dis_table thead").empty();
+			$("#dis_table tbody").empty();
+		});
+		$("#clear_all").click(function() {
+			$("#sql").val('');
+			$("#dis_table thead").empty();
+			$("#dis_table tbody").empty();
+		});
+	</script>
+
+</html>

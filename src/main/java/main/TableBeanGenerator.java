@@ -11,7 +11,7 @@ import java.sql.Types;
 public class TableBeanGenerator {
 
 	public static void main(String[] args) throws SQLException, IOException {
-		String tableName = "course";
+		String tableName = "item";
 		
 		createBean(tableName);
 	}
